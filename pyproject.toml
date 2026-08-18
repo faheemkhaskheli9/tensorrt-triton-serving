@@ -1,0 +1,5 @@
+[project]
+name = "tensorrt-triton-serving"
+version = "0.1.0"
+description = "Triton / TensorRT Model Serving"
+requires-python = ">=3.10"
