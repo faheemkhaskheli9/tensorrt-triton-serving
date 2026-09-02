@@ -1,1 +1,11 @@
-# Fill in with the exact package versions used once implementation starts.
+# Runtime dependencies, pinned as implementation progresses.
+#
+# Phase 1 (PyTorch -> ONNX conversion), CPU-only:
+torch>=2.2
+onnx>=1.16
+onnxruntime>=1.17
+numpy>=1.24
+
+# Phase 1 also targets ONNX -> TensorRT; `tensorrt` + `pycuda` are only
+# installable on a CUDA host and are intentionally left out of the base
+# requirements. Phases 2-3 add tritonclient and fastapi/uvicorn.

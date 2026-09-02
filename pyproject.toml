@@ -3,3 +3,22 @@ name = "tensorrt-triton-serving"
 version = "0.1.0"
 description = "Triton / TensorRT Model Serving"
 requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.2",
+    "onnx>=1.16",
+    "onnxruntime>=1.17",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+trt-serving = "trt_serving.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
