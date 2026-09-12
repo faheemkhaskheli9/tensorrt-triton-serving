@@ -34,3 +34,28 @@ def test_cli_bad_shape_is_rejected(tmp_path):
 def test_cli_requires_subcommand():
     with pytest.raises(SystemExit):
         cli.main([])
+
+
+def test_cli_build_repo_from_exported_onnx(tmp_path, capsys):
+    onnx_path = tmp_path / "m.onnx"
+    assert cli.main(["export", "--output", str(onnx_path), "--input-shape", "1x3x16x16"]) == 0
+
+    repo_dir = tmp_path / "repo"
+    rc = cli.main(
+        ["build-repo", "--model", str(onnx_path), "--repo-dir", str(repo_dir), "--model-name", "m"]
+    )
+
+    assert rc == 0
+    assert "repository ready" in capsys.readouterr().out
+    assert (repo_dir / "m" / "config.pbtxt").is_file()
+    assert (repo_dir / "m" / "1" / "model.onnx").is_file()
+
+
+def test_cli_build_repo_rejects_unsupported_extension(tmp_path, capsys):
+    bogus = tmp_path / "m.pt"
+    bogus.write_bytes(b"x")
+    rc = cli.main(
+        ["build-repo", "--model", str(bogus), "--repo-dir", str(tmp_path / "repo"), "--model-name", "m"]
+    )
+    assert rc == 2
+    assert "error" in capsys.readouterr().out

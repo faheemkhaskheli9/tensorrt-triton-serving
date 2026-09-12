@@ -13,6 +13,7 @@ from collections.abc import Sequence
 from .build_engine import TensorRTUnavailableError, build_engine
 from .export_onnx import ExportConfig, ExportError, export_to_onnx
 from .models import TinyClassifier
+from .repository import ModelRepositoryError, build_model_repository
 
 
 def _parse_shape(text: str) -> tuple[int, ...]:
@@ -48,6 +49,18 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument("--precision", choices=["fp32", "fp16"], default="fp32")
     build.add_argument(
         "--max-workspace-mb", type=int, default=1024, help="TensorRT builder workspace, in MiB."
+    )
+
+    repo = sub.add_parser(
+        "build-repo", help="Generate a Triton model repository entry for a converted model."
+    )
+    repo.add_argument("--model", required=True, help="Source .onnx/.plan/.engine file.")
+    repo.add_argument("--repo-dir", required=True, help="Triton model repository root.")
+    repo.add_argument("--model-name", required=True, help="Name Triton will serve this model as.")
+    repo.add_argument("--version", type=int, default=1)
+    repo.add_argument(
+        "--max-batch-size", type=int, default=8,
+        help="Used only if the model's batch axis is dynamic.",
     )
     return parser
 
@@ -89,6 +102,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(
             f"built {result.path} | precision={result.precision} | "
             f"{result.size_bytes / 1024:.1f} KiB"
+        )
+        return 0
+
+    if args.command == "build-repo":
+        try:
+            result = build_model_repository(
+                args.model,
+                args.repo_dir,
+                args.model_name,
+                version=args.version,
+                max_batch_size=args.max_batch_size,
+            )
+        except (ModelRepositoryError, FileNotFoundError) as exc:
+            print(f"error: {exc}")
+            return 2
+        print(
+            f"repository ready at {result.model_dir} | platform={result.platform} | "
+            f"max_batch_size={result.max_batch_size}"
         )
         return 0
 

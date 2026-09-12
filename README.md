@@ -116,6 +116,23 @@ On a CPU-only host (no `tensorrt` package / no CUDA GPU) this raises
 workspace size, atomic write) is unit-tested behind a fake builder backend
 so it doesn't need a GPU to verify.
 
+Phase 2 — Triton model repository layout:
+
+```bash
+python -m trt_serving build-repo --model models/tiny_classifier.onnx \
+    --repo-dir models/triton_repo --model-name tiny_classifier
+```
+
+Writes `models/triton_repo/tiny_classifier/config.pbtxt` and
+`models/triton_repo/tiny_classifier/1/model.onnx`. For an ONNX model, the
+`config.pbtxt` input/output section (names, dtypes, dims) is derived from the
+graph itself rather than hand-typed. A `.engine`/`.plan` TensorRT file has no
+introspectable graph metadata here, so its tensor specs must be supplied via
+the `build_model_repository(..., inputs=..., outputs=...)` Python API.
+Starting `tritonserver` against the generated repository and confirming the
+model reports ready needs the real Triton binary (and, for TensorRT, a GPU),
+which this repo's CPU-only dev/CI host does not have.
+
 ## 10. Evaluation
 
 Document evaluation metrics and how to reproduce them here (see `docs/evaluation.md`).
