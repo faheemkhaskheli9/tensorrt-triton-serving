@@ -100,8 +100,21 @@ python -m trt_serving export --output models/m.onnx --input-shape 1x3x64x64 --st
 ```
 
 The exporter writes atomically and raises rather than emit an `.onnx` that
-fails `onnx.checker` or drifts from the source model. `ONNX -> TensorRT`
-(issue #2) requires a CUDA host and is not covered by the base install.
+fails `onnx.checker` or drifts from the source model.
+
+Phase 1 — ONNX -> TensorRT engine conversion (needs a CUDA GPU host with
+`tensorrt` installed; not covered by the base CPU-only install):
+
+```bash
+python -m trt_serving build-engine --onnx models/tiny_classifier.onnx \
+    --output models/tiny_classifier.engine --precision fp16
+```
+
+On a CPU-only host (no `tensorrt` package / no CUDA GPU) this raises
+`TensorRTUnavailableError` with an actionable message instead of a bare
+`ImportError` or CUDA crash; the conversion logic itself (precision mode,
+workspace size, atomic write) is unit-tested behind a fake builder backend
+so it doesn't need a GPU to verify.
 
 ## 10. Evaluation
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 from collections.abc import Sequence
 
+from .build_engine import TensorRTUnavailableError, build_engine
 from .export_onnx import ExportConfig, ExportError, export_to_onnx
 from .models import TinyClassifier
 
@@ -38,6 +39,16 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--num-classes", type=int, default=10)
     export.add_argument("--static-batch", action="store_true", help="Disable dynamic batch axis.")
     export.add_argument("--parity-samples", type=int, default=5)
+
+    build = sub.add_parser(
+        "build-engine", help="Convert an ONNX model into a TensorRT engine (needs a GPU host)."
+    )
+    build.add_argument("--onnx", required=True, help="Source .onnx file.")
+    build.add_argument("--output", required=True, help="Destination .engine/.plan path.")
+    build.add_argument("--precision", choices=["fp32", "fp16"], default="fp32")
+    build.add_argument(
+        "--max-workspace-mb", type=int, default=1024, help="TensorRT builder workspace, in MiB."
+    )
     return parser
 
 
@@ -59,6 +70,26 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"error: {exc}")
             return 2
         print(f"exported {result}")
+        return 0
+
+    if args.command == "build-engine":
+        try:
+            result = build_engine(
+                args.onnx,
+                args.output,
+                precision=args.precision,
+                max_workspace_bytes=args.max_workspace_mb * (1 << 20),
+            )
+        except TensorRTUnavailableError as exc:
+            print(f"error: {exc}")
+            return 3
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"error: {exc}")
+            return 2
+        print(
+            f"built {result.path} | precision={result.precision} | "
+            f"{result.size_bytes / 1024:.1f} KiB"
+        )
         return 0
 
     return 1
